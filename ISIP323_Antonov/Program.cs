@@ -51,12 +51,46 @@ class Program
                 }
             }
 
+            char[] letters = new char[1000];
+            int[] counts = new int[1000];
+            int uniqueCount = 0;
+
+            for (int i = 0; i < userText.Length; i++)
+            {
+                char ch = Char.ToLower(userText[i]);
+                if (Char.IsLetter(ch))
+                {
+                    bool found = false;
+                    for (int j = 0; j < uniqueCount; j++)
+                    {
+                        if (letters[j] == ch)
+                        {
+                            counts[j]++;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found)
+                    {
+                        letters[uniqueCount] = ch;
+                        counts[uniqueCount] = 1;
+                        uniqueCount++;
+                    }
+                }
+            }
+
             Console.WriteLine("Количество слов: " + wordCount);
             Console.WriteLine("Самое короткое слово: " + shortestWord);
             Console.WriteLine("Самое длинное слово: " + longestWord);
             Console.WriteLine("Количество предложений: " + sentenceCount);
             Console.WriteLine("Гласные: " + vowelCount);
             Console.WriteLine("Согласные: " + consonantCount);
+            Console.WriteLine("Частота букв:");
+            for (int i = 0; i < uniqueCount; i++)
+            {
+                Console.WriteLine(letters[i] + " = " + counts[i]);
+            }
+
             break;
         }
     }
