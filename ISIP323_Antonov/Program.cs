@@ -1,7 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 
 class Program
 {
+    static List<string> allStatistics = new List<string>();
+
     static void Main()
     {
         while (true)
@@ -79,19 +82,42 @@ class Program
                 }
             }
 
-            Console.WriteLine("Количество слов: " + wordCount);
-            Console.WriteLine("Самое короткое слово: " + shortestWord);
-            Console.WriteLine("Самое длинное слово: " + longestWord);
-            Console.WriteLine("Количество предложений: " + sentenceCount);
-            Console.WriteLine("Гласные: " + vowelCount);
-            Console.WriteLine("Согласные: " + consonantCount);
-            Console.WriteLine("Частота букв:");
+            string statistics = "";
+            statistics += "Количество слов: " + wordCount + "\n";
+            statistics += "Самое короткое слово: " + shortestWord + "\n";
+            statistics += "Самое длинное слово: " + longestWord + "\n";
+            statistics += "Количество предложений: " + sentenceCount + "\n";
+            statistics += "Гласные: " + vowelCount + "\n";
+            statistics += "Согласные: " + consonantCount + "\n";
+            statistics += "Частота букв:\n";
+
             for (int i = 0; i < uniqueCount; i++)
             {
-                Console.WriteLine(letters[i] + " = " + counts[i]);
+                statistics += letters[i] + " = " + counts[i] + "\n";
             }
 
-            break;
+            Console.WriteLine("\nРезультаты анализа:");
+            Console.WriteLine(statistics);
+
+            allStatistics.Add(statistics);
+
+            Console.WriteLine("Хотите ввести новый текст? (да/нет)");
+            string answer = Console.ReadLine();
+            if (answer.ToLower() != "да")
+            {
+                Console.WriteLine("Хотите вывести статистику по прошлым текстам? (да/нет)");
+                string hist = Console.ReadLine();
+                if (hist.ToLower() == "да")
+                {
+                    Console.WriteLine("\nВсе сохраненные результаты:\n");
+                    for (int i = 0; i < allStatistics.Count; i++)
+                    {
+                        Console.WriteLine("Текст #" + (i + 1));
+                        Console.WriteLine(allStatistics[i]);
+                    }
+                }
+                break;
+            }
         }
     }
 }
