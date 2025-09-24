@@ -15,7 +15,22 @@ class Program
                 continue;
             }
 
-            Console.WriteLine("Текст принят!");
+            char[] separators = { ' ', ',', '.', '!', '?', ';', ':', '-', '\n', '\r' };
+            string[] words = userText.Split(separators, StringSplitOptions.RemoveEmptyEntries);
+            int wordCount = words.Length;
+
+            int sentenceCount = 0;
+            for (int i = 0; i < userText.Length; i++)
+            {
+                char c = userText[i];
+                if (c == '.' || c == '!' || c == '?')
+                {
+                    sentenceCount++;
+                }
+            }
+
+            Console.WriteLine("Количество слов: " + wordCount);
+            Console.WriteLine("Количество предложений: " + sentenceCount);
             break;
         }
     }
