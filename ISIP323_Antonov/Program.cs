@@ -84,8 +84,79 @@ namespace LibraryConsoleApp
 
     public class Program
     {
+        static Library library = new Library();
+
         public static void Main(string[] args)
         {
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+            bool exit = false;
+            while (!exit)
+            {
+                Console.WriteLine("=== Библиотека ===");
+                Console.WriteLine("1 - Показать все книги");
+                Console.WriteLine("2 - Добавить книгу");
+                Console.WriteLine("3 - Удалить книгу");
+                Console.WriteLine("0 - Выход");
+                Console.Write("Ваш выбор: ");
+
+                var choice = Console.ReadLine();
+                switch (choice)
+                {
+                    case "1":
+                        ShowAll();
+                        break;
+                    case "2":
+                        AddBook();
+                        break;
+                    case "3":
+                        RemoveBook();
+                        break;
+                    case "0":
+                        exit = true;
+                        break;
+                    default:
+                        Console.WriteLine("Неверный выбор.");
+                        break;
+                }
+
+                Console.WriteLine("\nНажмите Enter, чтобы продолжить...");
+                Console.ReadLine();
+                Console.Clear();
+            }
+        }
+
+        static void ShowAll()
+        {
+            var all = library.GetAllBooks();
+            foreach (var b in all)
+                Console.WriteLine(b);
+        }
+
+        static void AddBook()
+        {
+            Console.Write("Название: ");
+            string title = Console.ReadLine();
+            Console.Write("Автор: ");
+            string author = Console.ReadLine();
+            Console.Write("Год: ");
+            int year = int.Parse(Console.ReadLine());
+            Console.Write("Цена: ");
+            decimal price = decimal.Parse(Console.ReadLine());
+            Genre genre = Genre.Fiction;
+
+            library.AddBook(new Book { Title = title, Author = author, Year = year, Price = price, Genre = genre });
+            Console.WriteLine("Книга добавлена!");
+        }
+
+        static void RemoveBook()
+        {
+            Console.Write("Введите ID: ");
+            int id = int.Parse(Console.ReadLine());
+            if (library.RemoveBook(id))
+                Console.WriteLine("Книга удалена.");
+            else
+                Console.WriteLine("Книга не найдена.");
         }
     }
 }
