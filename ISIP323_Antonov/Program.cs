@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LibraryConsoleApp
 {
@@ -7,19 +8,24 @@ namespace LibraryConsoleApp
     {
         Fiction,
         NonFiction,
-        ScienceFiction
+        ScienceFiction,
+        Fantasy,
+        Romance
     }
 
     public class Book
     {
-        public int Id { get; private set; }
+        public int Id { get; internal set; }
         public string Title { get; set; }
         public string Author { get; set; }
         public Genre Genre { get; set; }
         public int Year { get; set; }
         public decimal Price { get; set; }
 
-        public override string ToString() { return ""; }
+        public override string ToString()
+        {
+            return $"Id: {Id}\nНазвание: {Title}\nАвтор: {Author}\nЖанр: {Genre}\nГод: {Year}\nЦена: {Price:0.00} руб.\n";
+        }
     }
 
     public class Library
