@@ -1,24 +1,45 @@
-﻿﻿Console.Write("Введите число операций: ");
-string C = Console.ReadLine();
-int Count = Convert.ToInt32(C);
+﻿using System;
+using System.Collections.Generic;
 
-if (Count < 2 || Count > 40) Console.WriteLine("Некорректное кол-во операций!");
-else
+namespace LibraryConsoleApp
 {
-    double sum = 0;
-    double[] cash = new double[Count];
-    string[] name = new string[Count];
-    Console.WriteLine("Введите информацию о операции по шаблону 'Название услуги или товара; Количество денег(в рублях)'");
-    for (int i = 0; i < Count; i++)
+    public enum Genre
     {
-        Console.Write($"Операция № {i + 1}: ");
-        string operation = Console.ReadLine();
-        string[] operations = operation.Split(';');
-        name[i] = operations[0];
-        cash[i] = Convert.ToDouble(operations[1]);
-        sum += cash[i];
+        Fiction,
+        NonFiction,
+        ScienceFiction
     }
 
+    public class Book
+    {
+        public int Id { get; private set; }
+        public string Title { get; set; }
+        public string Author { get; set; }
+        public Genre Genre { get; set; }
+        public int Year { get; set; }
+        public decimal Price { get; set; }
 
+        public override string ToString() { return ""; }
+    }
 
+    public class Library
+    {
+        public void AddBook(Book book) { }
+        public bool RemoveBook(int id) { return false; }
+        public List<Book> FindByTitle(string title) { return new List<Book>(); }
+        public List<Book> FindByAuthor(string author) { return new List<Book>(); }
+        public List<Book> FindByGenre(Genre genre) { return new List<Book>(); }
+        public List<Book> SortByTitle() { return new List<Book>(); }
+        public List<Book> SortByYear() { return new List<Book>(); }
+        public Book GetMostExpensiveBook() { return null; }
+        public Book GetCheapestBook() { return null; }
+        public Dictionary<string, int> GroupByAuthor() { return new Dictionary<string, int>(); }
+    }
+
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+        }
+    }
 }
