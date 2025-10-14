@@ -341,6 +341,7 @@ namespace UniversityApp
 
             if (!course.EnrolledStudents.Any()) { Console.WriteLine("На курсе нет студентов."); return; }
             foreach (var s in course.EnrolledStudents) Console.WriteLine($"#{s.StudentId} {s.Name}");
+
         }
     }
 }
