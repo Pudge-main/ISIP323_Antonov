@@ -32,6 +32,8 @@ namespace UniversityApp
         public int StudentId { get; private set; }
         public List<Grade> Grades { get; private set; } = new List<Grade>();
 
+        private List<Course> _enrolledCourses = new List<Course>();
+
         public Student(string name, int age, string email, int studentId)
             : base(name, age, email)
         {
@@ -39,9 +41,23 @@ namespace UniversityApp
             StudentId = studentId;
         }
 
-        public void Enroll(Course course) { }
-        public List<Course> GetEnrolledCourses() { return null; }
-        public override void ShowInfo() { }
+        public void Enroll(Course course)
+        {
+            if (course == null) throw new ArgumentNullException(nameof(course));
+            if (_enrolledCourses.Contains(course)) return;
+            bool ok = course.EnrollStudent(this);
+            if (ok)
+            {
+                _enrolledCourses.Add(course);
+            }
+        }
+
+        public List<Course> GetEnrolledCourses() => _enrolledCourses.ToList();
+
+        public override void ShowInfo()
+        {
+            Console.WriteLine($"Студент #{StudentId}: {Name}, {Age} лет, {Email}");
+        }
     }
 
     public class Teacher : Person
@@ -55,8 +71,16 @@ namespace UniversityApp
             TeacherId = teacherId;
         }
 
-        public void AssignCourse(Course course) { }
-        public override void ShowInfo() { }
+        public void AssignCourse(Course course)
+        {
+            if (course == null) throw new ArgumentNullException(nameof(course));
+            course.AssignedTeacher = this;
+        }
+
+        public override void ShowInfo()
+        {
+            Console.WriteLine($"Преподаватель #{TeacherId}: {Name}, {Age} лет, {Email}");
+        }
     }
 
     public class Course
@@ -78,9 +102,26 @@ namespace UniversityApp
             MaxStudents = maxStudents;
         }
 
-        public bool EnrollStudent(Student student) { return false; }
-        public void RemoveStudent(Student student) { }
-        public void ShowInfo() { }
+        public bool EnrollStudent(Student student)
+        {
+            if (student == null) throw new ArgumentNullException(nameof(student));
+            if (EnrolledStudents.Contains(student)) return true;
+            if (EnrolledStudents.Count >= MaxStudents) return false;
+            EnrolledStudents.Add(student);
+            return true;
+        }
+
+        public void RemoveStudent(Student student)
+        {
+            if (student == null) return;
+            EnrolledStudents.Remove(student);
+        }
+
+        public void ShowInfo()
+        {
+            Console.WriteLine($"Курс #{CourseId}: {Title} (макс {MaxStudents}), Преподаватель: {(AssignedTeacher != null ? AssignedTeacher.Name : "не назначен")}");
+            Console.WriteLine($"Записано студентов: {EnrolledStudents.Count}");
+        }
     }
 
     public class Grade
@@ -97,21 +138,42 @@ namespace UniversityApp
 
         public University() { }
 
-        public void AddStudent(Student student) { }
-        public Student GetStudentById(int id) { return null; }
+        public void AddStudent(Student student)
+        {
+            if (student == null) throw new ArgumentNullException(nameof(student));
+            if (Students.Any(s => s.StudentId == student.StudentId))
+                throw new ArgumentException("Студент с таким ID уже есть");
+            Students.Add(student);
+        }
 
-        public void AddTeacher(Teacher teacher) { }
-        public Teacher GetTeacherById(int id) { return null; }
+        public Student GetStudentById(int id) => Students.FirstOrDefault(s => s.StudentId == id);
 
-        public void AddCourse(Course course) { }
-        public Course GetCourseById(int id) { return null; }
+        public void AddTeacher(Teacher teacher)
+        {
+            if (teacher == null) throw new ArgumentNullException(nameof(teacher));
+            if (Teachers.Any(t => t.TeacherId == teacher.TeacherId))
+                throw new ArgumentException("Преподаватель с таким ID уже есть");
+            Teachers.Add(teacher);
+        }
+
+        public Teacher GetTeacherById(int id) => Teachers.FirstOrDefault(t => t.TeacherId == id);
+
+        public void AddCourse(Course course)
+        {
+            if (course == null) throw new ArgumentNullException(nameof(course));
+            if (Courses.Any(c => c.CourseId == course.CourseId))
+                throw new ArgumentException("Курс с таким ID уже есть");
+            Courses.Add(course);
+        }
+
+        public Course GetCourseById(int id) => Courses.FirstOrDefault(c => c.CourseId == id);
     }
 
     class Program
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Программа: система управления университетом (версия: базовые конструкторы и валидация)");
+            Console.WriteLine("Программа: система управления университетом (версия: регистрация на курс)");
         }
     }
 }
