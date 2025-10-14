@@ -13,11 +13,11 @@ namespace UniversityApp
         protected Person(string name, int age, string email)
         {
             if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Name не может быть пустым");
+                throw new ArgumentException("Имя не может быть пустым");
             if (age <= 0)
-                throw new ArgumentException("Age должен быть положительным");
+                throw new ArgumentException("Возраст должен быть положительным");
             if (string.IsNullOrWhiteSpace(email) || !email.Contains("@"))
-                throw new ArgumentException("Email должен быть корректным");
+                throw new ArgumentException("Email должен содержать символ '@'");
 
             Name = name;
             Age = age;
@@ -43,7 +43,8 @@ namespace UniversityApp
         public void Enroll(Course course)
         {
             if (course == null) throw new ArgumentNullException(nameof(course));
-            if (_enrolledCourses.Contains(course)) return;
+            if (_enrolledCourses.Contains(course)) { Console.WriteLine("Студент уже записан на этот курс."); return; }
+
             bool ok = course.EnrollStudent(this);
             if (ok) _enrolledCourses.Add(course);
             else Console.WriteLine("Не удалось записать на курс — возможно он полон.");
@@ -148,6 +149,7 @@ namespace UniversityApp
         public double Value { get; set; }
     }
 
+    // Контейнер — Университет
     public class University
     {
         public List<Student> Students { get; private set; } = new List<Student>();
@@ -193,7 +195,7 @@ namespace UniversityApp
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Система управления университетом — CLI (версия: оценки и средний балл)");
+            Console.WriteLine("Система управления университетом — финальная простая версия (новичок)");
             SeedSampleData();
 
             while (true)
@@ -274,15 +276,15 @@ namespace UniversityApp
                 t1.AssignCourse(c1);
                 t2.AssignCourse(c2);
             }
-            catch {  }
+            catch { }
         }
 
         static void AddStudentCli()
         {
             Console.Write("Имя: "); string name = Console.ReadLine();
-            Console.Write("Возраст: "); if (!int.TryParse(Console.ReadLine(), out int age)) { Console.WriteLine("Неправильный возраст"); return; }
+            Console.Write("Возраст: "); if (!int.TryParse(Console.ReadLine(), out int age)) { Console.WriteLine("Неправильный ввод возраста"); return; }
             Console.Write("Email: "); string email = Console.ReadLine();
-            Console.Write("ID студента (число): "); if (!int.TryParse(Console.ReadLine(), out int id)) { Console.WriteLine("Неправильный ID"); return; }
+            Console.Write("ID студента (число): "); if (!int.TryParse(Console.ReadLine(), out int id)) { Console.WriteLine("Неправильный ввод ID"); return; }
 
             var student = new Student(name, age, email, id);
             uni.AddStudent(student);
@@ -292,15 +294,15 @@ namespace UniversityApp
         static void ListStudents()
         {
             if (!uni.Students.Any()) { Console.WriteLine("Студентов нет."); return; }
-            foreach (var s in uni.Students) s.ShowInfo();
+            foreach (var s in uni.Students.OrderBy(s => s.StudentId)) s.ShowInfo();
         }
 
         static void AddTeacherCli()
         {
             Console.Write("Имя: "); string name = Console.ReadLine();
-            Console.Write("Возраст: "); if (!int.TryParse(Console.ReadLine(), out int age)) { Console.WriteLine("Неправильный возраст"); return; }
+            Console.Write("Возраст: "); if (!int.TryParse(Console.ReadLine(), out int age)) { Console.WriteLine("Неправильный ввод возраста"); return; }
             Console.Write("Email: "); string email = Console.ReadLine();
-            Console.Write("ID преподавателя (число): "); if (!int.TryParse(Console.ReadLine(), out int id)) { Console.WriteLine("Неправильный ID"); return; }
+            Console.Write("ID преподавателя (число): "); if (!int.TryParse(Console.ReadLine(), out int id)) { Console.WriteLine("Неправильный ввод ID"); return; }
 
             var teacher = new Teacher(name, age, email, id);
             uni.AddTeacher(teacher);
@@ -310,14 +312,14 @@ namespace UniversityApp
         static void ListTeachers()
         {
             if (!uni.Teachers.Any()) { Console.WriteLine("Преподавателей нет."); return; }
-            foreach (var t in uni.Teachers) t.ShowInfo();
+            foreach (var t in uni.Teachers.OrderBy(t => t.TeacherId)) t.ShowInfo();
         }
 
         static void CreateCourseCli()
         {
-            Console.Write("ID курса: "); if (!int.TryParse(Console.ReadLine(), out int id)) { Console.WriteLine("Неправильный ID"); return; }
+            Console.Write("ID курса: "); if (!int.TryParse(Console.ReadLine(), out int id)) { Console.WriteLine("Неправильный ввод ID"); return; }
             Console.Write("Название курса: "); string title = Console.ReadLine();
-            Console.Write("Максимум студентов: "); if (!int.TryParse(Console.ReadLine(), out int max)) { Console.WriteLine("Неправильное число"); return; }
+            Console.Write("Максимум студентов: "); if (!int.TryParse(Console.ReadLine(), out int max)) { Console.WriteLine("Неправильный ввод числа"); return; }
 
             var course = new Course(id, title, max);
             uni.AddCourse(course);
@@ -327,16 +329,13 @@ namespace UniversityApp
         static void ListCourses()
         {
             if (!uni.Courses.Any()) { Console.WriteLine("Курсов нет."); return; }
-            foreach (var c in uni.Courses)
-            {
-                c.ShowInfo();
-            }
+            foreach (var c in uni.Courses.OrderBy(c => c.CourseId)) c.ShowInfo();
         }
 
         static void EnrollStudentCli()
         {
-            Console.Write("ID студента: "); if (!int.TryParse(Console.ReadLine(), out int sid)) { Console.WriteLine("Неправильный ID"); return; }
-            Console.Write("ID курса: "); if (!int.TryParse(Console.ReadLine(), out int cid)) { Console.WriteLine("Неправильный ID"); return; }
+            Console.Write("ID студента: "); if (!int.TryParse(Console.ReadLine(), out int sid)) { Console.WriteLine("Неправильный ввод ID"); return; }
+            Console.Write("ID курса: "); if (!int.TryParse(Console.ReadLine(), out int cid)) { Console.WriteLine("Неправильный ввод ID"); return; }
 
             var student = uni.GetStudentById(sid);
             var course = uni.GetCourseById(cid);
@@ -344,46 +343,53 @@ namespace UniversityApp
             if (course == null) { Console.WriteLine("Курс не найден"); return; }
 
             student.Enroll(course);
-            Console.WriteLine("Операция записи: выполнена (если курс не был полон).");
+            Console.WriteLine("Операция записи завершена.");
         }
 
         static void ShowCoursesOfStudentCli()
         {
-            Console.Write("ID студента: "); if (!int.TryParse(Console.ReadLine(), out int sid)) { Console.WriteLine("Неправильный ID"); return; }
+            Console.Write("ID студента: "); if (!int.TryParse(Console.ReadLine(), out int sid)) { Console.WriteLine("Неправильный ввод ID"); return; }
             var student = uni.GetStudentById(sid);
             if (student == null) { Console.WriteLine("Студент не найден"); return; }
 
             var courses = student.GetEnrolledCourses();
             if (!courses.Any()) { Console.WriteLine("Студент не записан ни на один курс."); return; }
-            foreach (var c in courses) Console.WriteLine($"#{c.CourseId} {c.Title}");
+            foreach (var c in courses.OrderBy(c => c.CourseId)) Console.WriteLine($"#{c.CourseId} {c.Title}");
         }
 
         static void ShowStudentsOfCourseCli()
         {
-            Console.Write("ID курса: "); if (!int.TryParse(Console.ReadLine(), out int cid)) { Console.WriteLine("Неправильный ID"); return; }
+            Console.Write("ID курса: "); if (!int.TryParse(Console.ReadLine(), out int cid)) { Console.WriteLine("Неправильный ввод ID"); return; }
             var course = uni.GetCourseById(cid);
             if (course == null) { Console.WriteLine("Курс не найден"); return; }
 
             if (!course.EnrolledStudents.Any()) { Console.WriteLine("На курсе нет студентов."); return; }
-            foreach (var s in course.EnrolledStudents) Console.WriteLine($"#{s.StudentId} {s.Name}");
+            foreach (var s in course.EnrolledStudents.OrderBy(s => s.StudentId)) Console.WriteLine($"#{s.StudentId} {s.Name}");
         }
 
         static void AddGradeCli()
         {
-            Console.Write("ID студента: "); if (!int.TryParse(Console.ReadLine(), out int sid)) { Console.WriteLine("Неправильный ID"); return; }
-            Console.Write("ID курса: "); if (!int.TryParse(Console.ReadLine(), out int cid)) { Console.WriteLine("Неправильный ID"); return; }
-            Console.Write("Оценка (0-100): "); if (!double.TryParse(Console.ReadLine(), out double val)) { Console.WriteLine("Неправильная оценка"); return; }
+            Console.Write("ID студента: "); if (!int.TryParse(Console.ReadLine(), out int sid)) { Console.WriteLine("Неправильный ввод ID"); return; }
+            Console.Write("ID курса: "); if (!int.TryParse(Console.ReadLine(), out int cid)) { Console.WriteLine("Неправильный ввод ID"); return; }
+            Console.Write("Оценка (0-100): "); if (!double.TryParse(Console.ReadLine(), out double val)) { Console.WriteLine("Неправильный ввод оценки"); return; }
 
             var student = uni.GetStudentById(sid);
             if (student == null) { Console.WriteLine("Студент не найден"); return; }
 
-            student.AddGrade(cid, val);
-            Console.WriteLine("Оценка добавлена.");
+            try
+            {
+                student.AddGrade(cid, val);
+                Console.WriteLine("Оценка добавлена.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Не удалось добавить оценку: {ex.Message}");
+            }
         }
 
         static void ShowAverageCli()
         {
-            Console.Write("ID студента: "); if (!int.TryParse(Console.ReadLine(), out int sid)) { Console.WriteLine("Неправильный ID"); return; }
+            Console.Write("ID студента: "); if (!int.TryParse(Console.ReadLine(), out int sid)) { Console.WriteLine("Неправильный ввод ID"); return; }
             var student = uni.GetStudentById(sid);
             if (student == null) { Console.WriteLine("Студент не найден"); return; }
 
