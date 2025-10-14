@@ -51,9 +51,30 @@ namespace UniversityApp
 
         public List<Course> GetEnrolledCourses() => _enrolledCourses.ToList();
 
+        public void RemoveFromCourse(Course course)
+        {
+            if (course == null) return;
+            course.RemoveStudent(this);
+            _enrolledCourses.Remove(course);
+        }
+
+        public void AddGrade(int courseId, double value)
+        {
+            if (value < 0 || value > 100) throw new ArgumentException("Оценка должна быть от 0 до 100");
+            Grades.Add(new Grade { CourseId = courseId, Value = value });
+        }
+
+        public double? AverageGrade()
+        {
+            if (!Grades.Any()) return null;
+            return Grades.Average(g => g.Value);
+        }
+
         public override void ShowInfo()
         {
             Console.WriteLine($"Студент #{StudentId}: {Name}, {Age} лет, {Email}");
+            var avg = AverageGrade();
+            Console.WriteLine($"Средний балл: {(avg.HasValue ? avg.Value.ToString("F2") : "нет оценок")}");
         }
     }
 
@@ -172,7 +193,7 @@ namespace UniversityApp
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Система управления университетом — простой CLI (версия: меню)");
+            Console.WriteLine("Система управления университетом — CLI (версия: оценки и средний балл)");
             SeedSampleData();
 
             while (true)
@@ -199,6 +220,8 @@ namespace UniversityApp
             Console.WriteLine("7 - Записать студента на курс");
             Console.WriteLine("8 - Показать курсы студента");
             Console.WriteLine("9 - Показать студентов курса");
+            Console.WriteLine("10 - Добавить оценку студенту");
+            Console.WriteLine("11 - Показать средний балл студента");
             Console.WriteLine("0 - Выход");
             Console.Write("Выберите пункт: ");
         }
@@ -218,6 +241,8 @@ namespace UniversityApp
                     case "7": EnrollStudentCli(); break;
                     case "8": ShowCoursesOfStudentCli(); break;
                     case "9": ShowStudentsOfCourseCli(); break;
+                    case "10": AddGradeCli(); break;
+                    case "11": ShowAverageCli(); break;
                     default: Console.WriteLine("Неизвестный пункт"); break;
                 }
             }
@@ -341,7 +366,30 @@ namespace UniversityApp
 
             if (!course.EnrolledStudents.Any()) { Console.WriteLine("На курсе нет студентов."); return; }
             foreach (var s in course.EnrolledStudents) Console.WriteLine($"#{s.StudentId} {s.Name}");
+        }
 
+        static void AddGradeCli()
+        {
+            Console.Write("ID студента: "); if (!int.TryParse(Console.ReadLine(), out int sid)) { Console.WriteLine("Неправильный ID"); return; }
+            Console.Write("ID курса: "); if (!int.TryParse(Console.ReadLine(), out int cid)) { Console.WriteLine("Неправильный ID"); return; }
+            Console.Write("Оценка (0-100): "); if (!double.TryParse(Console.ReadLine(), out double val)) { Console.WriteLine("Неправильная оценка"); return; }
+
+            var student = uni.GetStudentById(sid);
+            if (student == null) { Console.WriteLine("Студент не найден"); return; }
+
+            student.AddGrade(cid, val);
+            Console.WriteLine("Оценка добавлена.");
+        }
+
+        static void ShowAverageCli()
+        {
+            Console.Write("ID студента: "); if (!int.TryParse(Console.ReadLine(), out int sid)) { Console.WriteLine("Неправильный ID"); return; }
+            var student = uni.GetStudentById(sid);
+            if (student == null) { Console.WriteLine("Студент не найден"); return; }
+
+            var avg = student.AverageGrade();
+            if (!avg.HasValue) Console.WriteLine("У студента нет оценок.");
+            else Console.WriteLine($"Средний балл: {avg.Value:F2}");
         }
     }
 }
