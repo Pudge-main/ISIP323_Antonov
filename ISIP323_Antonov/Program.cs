@@ -29,7 +29,12 @@ class Game
         while (player.HP > 0)
         {
             Console.WriteLine($"--- Ход {turn} ---");
-            if (rand.Next(2) == 0)
+            if (turn % 10 == 0)
+            {
+                Enemy boss = GetRandomBoss();
+                Battle(player, boss);
+            }
+            else if (rand.Next(2) == 0)
             {
                 Enemy e = GetRandomEnemy();
                 Battle(player, e);
@@ -53,9 +58,18 @@ class Game
         return new Mage();
     }
 
+    private Enemy GetRandomBoss()
+    {
+        int r = rand.Next(4);
+        if (r == 0) return new Boss("ВВГ (Гоблин)", 60, 12, 8, "крит", 0.2);
+        if (r == 1) return new Boss("Ковальский (Скелет)", 100, 13, 10, "игнор", 0);
+        if (r == 2) return new Boss("Архимаг C++ (Маг)", 70, 16, 6, "фриз", 0.25);
+        return new Boss("Пестов С-- (Скелет)", 50, 18, 3, "игнор", 0.15);
+    }
+
     private void Battle(Player p, Enemy e)
     {
-        Console.WriteLine($"Вы встретили врага: {e.Name} (HP {e.HP})");
+        Console.WriteLine($"\n⚔️  Вы встретили врага: {e.Name} (HP {e.HP})");
 
         while (p.HP > 0 && e.HP > 0)
         {
@@ -74,7 +88,7 @@ class Game
         }
 
         if (p.HP > 0)
-            Console.WriteLine($"Вы победили {e.Name}!\n");
+            Console.WriteLine($"🎉 Вы победили {e.Name}!\n");
     }
 }
 
@@ -87,6 +101,9 @@ class Player
     public int Defense;
     public Weapon Weapon;
     public Armor Armor;
+
+    Random rand = new Random();
+    bool defending = false;
 
     public Player(string name)
     {
@@ -102,11 +119,18 @@ class Player
         int dmg = Attack + (Weapon?.AttackBonus ?? 0);
         e.HP -= dmg;
         Console.WriteLine($"{Name} атакует {e.Name} на {dmg} урона!");
+        defending = false;
     }
 
     public void Defend()
     {
-        Console.WriteLine($"{Name} защищается! Есть шанс уклониться.");
+        defending = true;
+        Console.WriteLine($"{Name} встал в защиту! 40% шанс уклониться.");
+    }
+
+    public bool TryDodge()
+    {
+        return defending && rand.NextDouble() < 0.4;
     }
 
     public void Heal()
@@ -122,12 +146,60 @@ class Enemy
     public int HP;
     public int Attack;
     public int Defense;
+    protected Random rand = new Random();
 
     public virtual void AttackPlayer(Player p)
     {
+        if (p.TryDodge())
+        {
+            Console.WriteLine($"{p.Name} уклонился от атаки!");
+            return;
+        }
+
         int dmg = Math.Max(Attack - p.Defense, 1);
         p.HP -= dmg;
         Console.WriteLine($"{Name} атакует {p.Name} на {dmg} урона!");
+    }
+}
+
+class Boss : Enemy
+{
+    string type;
+    double chance;
+
+    public Boss(string name, int hp, int atk, int def, string type, double chance)
+    {
+        Name = name;
+        HP = hp;
+        Attack = atk;
+        Defense = def;
+        this.type = type;
+        this.chance = chance;
+    }
+
+    public override void AttackPlayer(Player p)
+    {
+        if (type == "крит" && rand.NextDouble() < chance)
+        {
+            int dmg = (Attack * 2);
+            p.HP -= dmg;
+            Console.WriteLine($"{Name} наносит КРИТИЧЕСКИЙ удар на {dmg} урона!");
+        }
+        else if (type == "фриз" && rand.NextDouble() < chance)
+        {
+            Console.WriteLine($"{Name} замораживает {p.Name}! Ход пропущен!");
+            // можно реализовать заморозку в следующем ходу
+        }
+        else if (type == "игнор")
+        {
+            int dmg = Attack;
+            p.HP -= dmg;
+            Console.WriteLine($"{Name} игнорирует защиту! {p.Name} получает {dmg} урона!");
+        }
+        else
+        {
+            base.AttackPlayer(p);
+        }
     }
 }
 
@@ -140,6 +212,20 @@ class Goblin : Enemy
         Attack = 8;
         Defense = 2;
     }
+
+    public override void AttackPlayer(Player p)
+    {
+        if (rand.NextDouble() < 0.1)
+        {
+            int dmg = (Attack * 2);
+            p.HP -= dmg;
+            Console.WriteLine($"{Name} наносит КРИТИЧЕСКИЙ удар на {dmg} урона!");
+        }
+        else
+        {
+            base.AttackPlayer(p);
+        }
+    }
 }
 
 class Skeleton : Enemy
@@ -151,6 +237,13 @@ class Skeleton : Enemy
         Attack = 7;
         Defense = 3;
     }
+
+    public override void AttackPlayer(Player p)
+    {
+        int dmg = Attack; // игнорирует защиту
+        p.HP -= dmg;
+        Console.WriteLine($"{Name} игнорирует броню и наносит {dmg} урона!");
+    }
 }
 
 class Mage : Enemy
@@ -161,6 +254,18 @@ class Mage : Enemy
         HP = 25;
         Attack = 10;
         Defense = 1;
+    }
+
+    public override void AttackPlayer(Player p)
+    {
+        if (rand.NextDouble() < 0.15)
+        {
+            Console.WriteLine($"{Name} замораживает {p.Name}! Следующий ход пропущен!");
+        }
+        else
+        {
+            base.AttackPlayer(p);
+        }
     }
 }
 
