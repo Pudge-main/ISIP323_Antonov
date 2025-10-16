@@ -16,12 +16,65 @@ class Program
 
 class Game
 {
+    Random rand = new Random();
+
     public void Start()
     {
         Console.WriteLine("Введите имя игрока:");
         string name = Console.ReadLine();
         Player player = new Player(name);
-        Console.WriteLine($"Привет, {player.Name}! Игра началась.");
+        Console.WriteLine($"Привет, {player.Name}! Игра началась.\n");
+
+        int turn = 1;
+        while (player.HP > 0)
+        {
+            Console.WriteLine($"--- Ход {turn} ---");
+            if (rand.Next(2) == 0)
+            {
+                Enemy e = GetRandomEnemy();
+                Battle(player, e);
+            }
+            else
+            {
+                Chest c = new Chest();
+                c.Open(player);
+            }
+            turn++;
+        }
+
+        Console.WriteLine("Игра окончена! Вы проиграли!");
+    }
+
+    private Enemy GetRandomEnemy()
+    {
+        int r = rand.Next(3);
+        if (r == 0) return new Goblin();
+        if (r == 1) return new Skeleton();
+        return new Mage();
+    }
+
+    private void Battle(Player p, Enemy e)
+    {
+        Console.WriteLine($"Вы встретили врага: {e.Name} (HP {e.HP})");
+
+        while (p.HP > 0 && e.HP > 0)
+        {
+            Console.WriteLine("\n1 - Атаковать | 2 - Защищаться");
+            string choice = Console.ReadLine();
+
+            if (choice == "1")
+                p.AttackEnemy(e);
+            else
+                p.Defend();
+
+            if (e.HP > 0)
+                e.AttackPlayer(p);
+
+            Console.WriteLine($"Ваше HP: {p.HP}, HP врага: {e.HP}");
+        }
+
+        if (p.HP > 0)
+            Console.WriteLine($"Вы победили {e.Name}!\n");
     }
 }
 
@@ -132,6 +185,6 @@ class Chest
 {
     public void Open(Player player)
     {
-        Console.WriteLine("Вы нашли сундук!");
+        Console.WriteLine("Вы нашли сундук! Но он пока пустой.");
     }
 }
