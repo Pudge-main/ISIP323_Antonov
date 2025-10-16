@@ -168,23 +168,76 @@ class Weapon
 {
     public string Name;
     public int AttackBonus;
+
+    public Weapon(string name, int atk)
+    {
+        Name = name;
+        AttackBonus = atk;
+    }
 }
 
 class Armor
 {
     public string Name;
     public int DefenseBonus;
+
+    public Armor(string name, int def)
+    {
+        Name = name;
+        DefenseBonus = def;
+    }
 }
 
 class Potion
 {
     public string Name = "Лечебное зелье";
+
+    public void Use(Player p)
+    {
+        p.Heal();
+        Console.WriteLine($"{p.Name} использовал зелье и полностью восстановил здоровье!");
+    }
 }
 
 class Chest
 {
+    Random rand = new Random();
+
     public void Open(Player player)
     {
-        Console.WriteLine("Вы нашли сундук! Но он пока пустой.");
+        Console.WriteLine("Вы нашли сундук!");
+        int type = rand.Next(3);
+
+        if (type == 0)
+        {
+            Potion pot = new Potion();
+            pot.Use(player);
+        }
+        else if (type == 1)
+        {
+            Weapon newWeapon = new Weapon("Меч героя", rand.Next(3, 8));
+            Console.WriteLine($"Найдено оружие: {newWeapon.Name} (+{newWeapon.AttackBonus} к атаке)");
+            if (player.Weapon != null)
+                Console.WriteLine($"Текущее оружие: {player.Weapon.Name} (+{player.Weapon.AttackBonus})");
+            Console.WriteLine("Взять новое? (y/n)");
+            if (Console.ReadLine().ToLower() == "y")
+            {
+                player.Weapon = newWeapon;
+                Console.WriteLine("Оружие экипировано!");
+            }
+        }
+        else
+        {
+            Armor newArmor = new Armor("Кираса рыцаря", rand.Next(2, 6));
+            Console.WriteLine($"Найдена броня: {newArmor.Name} (+{newArmor.DefenseBonus} к защите)");
+            if (player.Armor != null)
+                Console.WriteLine($"Текущая броня: {player.Armor.Name} (+{player.Armor.DefenseBonus})");
+            Console.WriteLine("Взять новую? (y/n)");
+            if (Console.ReadLine().ToLower() == "y")
+            {
+                player.Armor = newArmor;
+                Console.WriteLine("Броня экипирована!");
+            }
+        }
     }
 }
