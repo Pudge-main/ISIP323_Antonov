@@ -14,13 +14,14 @@ class Program
     }
 }
 
-// ===== Декомпозиция =====
-
 class Game
 {
     public void Start()
     {
-        Console.WriteLine("Игра началась (заглушка)");
+        Console.WriteLine("Введите имя игрока:");
+        string name = Console.ReadLine();
+        Player player = new Player(name);
+        Console.WriteLine($"Привет, {player.Name}! Игра началась.");
     }
 }
 
@@ -34,9 +35,32 @@ class Player
     public Weapon Weapon;
     public Armor Armor;
 
-    public void AttackEnemy(Enemy e) { }
-    public void Defend() { }
-    public void Heal() { }
+    public Player(string name)
+    {
+        Name = name;
+        MaxHP = 100;
+        HP = 100;
+        Attack = 10;
+        Defense = 5;
+    }
+
+    public void AttackEnemy(Enemy e)
+    {
+        int dmg = Attack + (Weapon?.AttackBonus ?? 0);
+        e.HP -= dmg;
+        Console.WriteLine($"{Name} атакует {e.Name} на {dmg} урона!");
+    }
+
+    public void Defend()
+    {
+        Console.WriteLine($"{Name} защищается! Есть шанс уклониться.");
+    }
+
+    public void Heal()
+    {
+        HP = MaxHP;
+        Console.WriteLine($"{Name} полностью восстановил здоровье!");
+    }
 }
 
 class Enemy
@@ -46,12 +70,46 @@ class Enemy
     public int Attack;
     public int Defense;
 
-    public virtual void AttackPlayer(Player p) { }
+    public virtual void AttackPlayer(Player p)
+    {
+        int dmg = Math.Max(Attack - p.Defense, 1);
+        p.HP -= dmg;
+        Console.WriteLine($"{Name} атакует {p.Name} на {dmg} урона!");
+    }
 }
 
-class Goblin : Enemy { }
-class Skeleton : Enemy { }
-class Mage : Enemy { }
+class Goblin : Enemy
+{
+    public Goblin()
+    {
+        Name = "Гоблин";
+        HP = 30;
+        Attack = 8;
+        Defense = 2;
+    }
+}
+
+class Skeleton : Enemy
+{
+    public Skeleton()
+    {
+        Name = "Скелет";
+        HP = 40;
+        Attack = 7;
+        Defense = 3;
+    }
+}
+
+class Mage : Enemy
+{
+    public Mage()
+    {
+        Name = "Маг";
+        HP = 25;
+        Attack = 10;
+        Defense = 1;
+    }
+}
 
 class Weapon
 {
@@ -67,10 +125,13 @@ class Armor
 
 class Potion
 {
-    public string Name;
+    public string Name = "Лечебное зелье";
 }
 
 class Chest
 {
-    public void Open(Player player) { }
+    public void Open(Player player)
+    {
+        Console.WriteLine("Вы нашли сундук!");
+    }
 }
