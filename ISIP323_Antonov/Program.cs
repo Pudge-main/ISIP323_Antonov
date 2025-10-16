@@ -1,24 +1,11 @@
-﻿﻿Console.Write("Введите число операций: ");
-string C = Console.ReadLine();
-int Count = Convert.ToInt32(C);
+﻿using System;
 
-if (Count < 2 || Count > 40) Console.WriteLine("Некорректное кол-во операций!");
-else
+class Program
 {
-    double sum = 0;
-    double[] cash = new double[Count];
-    string[] name = new string[Count];
-    Console.WriteLine("Введите информацию о операции по шаблону 'Название услуги или товара; Количество денег(в рублях)'");
-    for (int i = 0; i < Count; i++)
+    static void Main()
     {
-        Console.Write($"Операция № {i + 1}: ");
-        string operation = Console.ReadLine();
-        string[] operations = operation.Split(';');
-        name[i] = operations[0];
-        cash[i] = Convert.ToDouble(operations[1]);
-        sum += cash[i];
+        Console.WriteLine("Добро пожаловать в текстовую игру-рогалик!");
+        Console.WriteLine("Нажмите любую клавишу, чтобы начать...");
+        Console.ReadKey();
     }
-
-
-
 }
