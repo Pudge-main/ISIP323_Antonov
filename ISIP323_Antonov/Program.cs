@@ -95,6 +95,16 @@ namespace AutoServiceGame
                                         );";
                     cmd.ExecuteNonQuery();
 
+                    cmd.CommandText = @"CREATE TABLE IF NOT EXISTS RepairLog (
+                                            RepairId INTEGER PRIMARY KEY AUTOINCREMENT,
+                                            Day INTEGER,
+                                            PartId INTEGER,
+                                            Income INTEGER,
+                                            Note TEXT,
+                                            FOREIGN KEY(PartId) REFERENCES Parts(PartId)
+                                        );";
+                    cmd.ExecuteNonQuery();
+
                     cmd.CommandText = "INSERT OR IGNORE INTO ServiceState(StateId, Balance) VALUES(1, 0);";
                     cmd.ExecuteNonQuery();
                 }
@@ -309,6 +319,23 @@ namespace AutoServiceGame
                 conn.Close();
             }
         }
+
+        public void AddRepairLog(int day, int partId, int income, string note)
+        {
+            using (var conn = new SQLiteConnection(_connString))
+            {
+                conn.Open();
+                using (var cmd = new SQLiteCommand("INSERT INTO RepairLog(Day, PartId, Income, Note) VALUES(@d, @p, @inc, @n);", conn))
+                {
+                    cmd.Parameters.AddWithValue("@d", day);
+                    cmd.Parameters.AddWithValue("@p", partId);
+                    cmd.Parameters.AddWithValue("@inc", income);
+                    cmd.Parameters.AddWithValue("@n", note ?? "");
+                    cmd.ExecuteNonQuery();
+                }
+                conn.Close();
+            }
+        }
     }
 
     public class AutoService
@@ -362,7 +389,7 @@ namespace AutoServiceGame
         {
             LoadFromDb();
             Console.WriteLine();
-            Console.WriteLine("=== Состояние автосервиса (День) ===");
+            Console.WriteLine("=== Состояние автосервиса ===");
             Console.WriteLine("Баланс: " + Balance + " руб.");
             Console.WriteLine("Склад:");
             foreach (var item in CatalogAndStock)
@@ -384,7 +411,7 @@ namespace AutoServiceGame
             return new Client(new Car(broken), repairCost);
         }
 
-        public void RepairCar(Client client)
+        public void RepairCar(Client client, int currentDay)
         {
             if (client == null || client.Car == null)
             {
@@ -406,6 +433,7 @@ namespace AutoServiceGame
                 _db.AddStock(pid, -1);
                 Balance += client.Payment;
                 _db.SetBalance(Balance);
+                _db.AddRepairLog(currentDay, pid, client.Payment, "Успешный ремонт");
                 Console.WriteLine($"Ремонт выполнен. Получено {client.Payment} руб. ({needed})");
             }
             else
@@ -413,6 +441,62 @@ namespace AutoServiceGame
                 Console.WriteLine($"Детали {needed} нет. Клиент уехал. Штраф 300 руб.");
                 Balance -= 300;
                 _db.SetBalance(Balance);
+                _db.AddRepairLog(currentDay, pid, 0, "Отказ (детали не было)");
+            }
+        }
+
+        public void RepairCarWithRisk(Client client, int currentDay)
+        {
+            LoadFromDb();
+            string needed = client.Car.BrokenPartName;
+            var entry = CatalogAndStock.FirstOrDefault(x => x.part.Name == needed);
+            if (entry.part != null && entry.qty > 0)
+            {
+                RepairCar(client, currentDay);
+                return;
+            }
+
+            var available = CatalogAndStock.Where(x => x.qty > 0).ToList();
+            if (available.Count == 0)
+            {
+                Console.WriteLine("На складе нет ни одной запасной детали. Ничего не подменить — только отказ.");
+                Console.WriteLine("Клиент уехал. Штраф 300 руб.");
+                Balance -= 300;
+                _db.SetBalance(Balance);
+                _db.AddRepairLog(currentDay, entry.part?.Id ?? 0, 0, "Отказ (нет деталей)");
+                return;
+            }
+
+            Console.WriteLine("Нужной детали нет. Можно рискнуть и поставить другую случайную деталь (это рискованно).");
+            Console.WriteLine("1 - Отказаться (штраф 300), 2 - Рискнуть (замена случайной детали)");
+            string ch = Console.ReadLine();
+            if (ch == "1")
+            {
+                Console.WriteLine("Вы отказались. Штраф 300 руб.");
+                Balance -= 300;
+                _db.SetBalance(Balance);
+                _db.AddRepairLog(currentDay, entry.part?.Id ?? 0, 0, "Отказ пользователем");
+                return;
+            }
+            else if (ch == "2")
+            {
+                Random rnd = new Random();
+                var chosen = available[rnd.Next(available.Count)];
+                _db.AddStock(chosen.part.Id, -1);
+                int compensation = (int)(client.Payment * 1.5);
+                Balance -= compensation;
+                _db.SetBalance(Balance);
+                _db.AddRepairLog(currentDay, chosen.part.Id, -compensation, $"Неправильная замена вместо {needed}");
+                Console.WriteLine($"Вы поставили {chosen.part.Name} вместо {needed}. Клиент требует компенсацию {compensation} руб.");
+                return;
+            }
+            else
+            {
+                Console.WriteLine("Неверный ввод, считаем за отказ.");
+                Balance -= 300;
+                _db.SetBalance(Balance);
+                _db.AddRepairLog(currentDay, entry.part?.Id ?? 0, 0, "Отказ (неверный ввод)");
+                return;
             }
         }
 
@@ -445,7 +529,6 @@ namespace AutoServiceGame
             }
             Balance -= (int)total;
             _db.SetBalance(Balance);
-
             _db.CreateOrder(pid, qty, currentDay, deliveryDays);
             Console.WriteLine($"Заказано {qty} шт. {partName}. Прибудет через {deliveryDays} дней.");
         }
@@ -458,7 +541,7 @@ namespace AutoServiceGame
             {
                 _db.AddStock(o.PartId, o.Quantity);
                 _db.MarkOrderDelivered(o.Id);
-                Console.WriteLine($"Поставка: добавлено {o.Quantity} шт. (PartId {o.PartId})");
+                Console.WriteLine($"Поставка прибыла: добавлено {o.Quantity} шт. (PartId {o.PartId})");
             }
             LoadFromDb();
         }
@@ -488,8 +571,20 @@ namespace AutoServiceGame
 
     class Program
     {
+        static void PrintInstructions()
+        {
+            Console.WriteLine("=== Инструкции по использованию (новичок) ===");
+            Console.WriteLine("1) Запустите приложение в Visual Studio как Console App (.NET Framework).");
+            Console.WriteLine("2) Убедитесь, что установлен пакет System.Data.SQLite (через NuGet).");
+            Console.WriteLine("3) При первом запуске создастся файл autoservice.db рядом с exe.");
+            Console.WriteLine("4) Рабочий цикл: дни, клиенты. В конце дня можно заказывать запчасти (приедут через 2 дня).");
+            Console.WriteLine("============================================");
+        }
+
         static void Main(string[] args)
         {
+            PrintInstructions();
+
             DbManager db = new DbManager("autoservice.db");
             AutoService service = new AutoService(db, 10000);
 
@@ -509,17 +604,29 @@ namespace AutoServiceGame
                     service.ShowStatus();
                     Client client = service.GenerateClient();
                     Console.WriteLine($"Клиент с поломкой: {client.Car.BrokenPartName}, готов заплатить: {client.Payment} руб.");
-                    Console.WriteLine("1 - Починить, 2 - Отказать");
+
+                    Console.WriteLine("1 - Починить (риск/без риска), 2 - Отказать");
                     string choice = Console.ReadLine();
                     if (choice == "1")
                     {
-                        service.RepairCar(client);
+                        service.LoadFromDb();
+                        var needed = client.Car.BrokenPartName;
+                        var entry = service.CatalogAndStock.FirstOrDefault(x => x.part.Name == needed);
+                        if (entry.part != null && entry.qty > 0)
+                        {
+                            service.RepairCar(client, day);
+                        }
+                        else
+                        {
+                            service.RepairCarWithRisk(client, day);
+                        }
                     }
                     else
                     {
                         Console.WriteLine("Вы отказали клиенту. Штраф 200 руб.");
                         service.Balance -= 200;
                         db.SetBalance(service.Balance);
+                        db.AddRepairLog(day, 0, 0, "Отказ (пользователь)");
                     }
 
                     if (service.Balance <= 0)
@@ -529,9 +636,9 @@ namespace AutoServiceGame
                     }
                 }
 
-                Console.WriteLine("День окончен. Хотите заказать запчасти? (y/n)");
+                Console.WriteLine("\nДень окончен. Хотите заказать детали? (y/n)");
                 string order = Console.ReadLine();
-                if (order != null && order.ToLower() == "y")
+                if (!string.IsNullOrWhiteSpace(order) && order.ToLower() == "y")
                 {
                     service.LoadFromDb();
                     for (int i = 0; i < service.CatalogAndStock.Count; i++)
