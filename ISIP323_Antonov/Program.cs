@@ -134,6 +134,50 @@ namespace AutoServiceGame
             }
         }
 
+        public void OrderPartsSimple()
+        {
+            Console.WriteLine("\n=== Меню покупки деталей ===");
+            for (int i = 0; i < Parts.Count; i++)
+            {
+                Console.WriteLine($"{i + 1}. {Parts[i].Name} — цена {Parts[i].Price} руб.");
+            }
+            Console.WriteLine("0. Отмена");
+            Console.Write("Выберите номер детали: ");
+            string input = Console.ReadLine();
+            int idx;
+            if (!int.TryParse(input, out idx) || idx < 0 || idx > Parts.Count)
+            {
+                Console.WriteLine("Неверный ввод.");
+                return;
+            }
+            if (idx == 0) return;
+            Console.Write("Введите количество: ");
+            string qIn = Console.ReadLine();
+            int qty;
+            if (!int.TryParse(qIn, out qty) || qty <= 0)
+            {
+                Console.WriteLine("Некорректное количество.");
+                return;
+            }
+            var sel = Parts[idx - 1];
+            long total = (long)sel.Price * qty;
+            if (total > int.MaxValue)
+            {
+                Console.WriteLine("Слишком большая сумма покупки.");
+                return;
+            }
+            if (Balance >= total)
+            {
+                Balance -= (int)total;
+                sel.Quantity += qty;
+                Console.WriteLine($"Куплено {qty} шт. {sel.Name}. Потрачено {total} руб.");
+            }
+            else
+            {
+                Console.WriteLine("Недостаточно денег для покупки.");
+            }
+        }
+
         public void OrderParts(string partName, int qty, int currentDay) { }
         public void ProcessDeliveries(int currentDay) { }
     }
@@ -143,17 +187,44 @@ namespace AutoServiceGame
         static void Main(string[] args)
         {
             AutoService service = new AutoService(10000);
-            service.ShowStatus();
 
-            Console.WriteLine("Генерируем одного клиента для теста ремонта...");
-            Client client = service.GenerateClient();
-            Console.WriteLine($"Клиент с поломкой: {client.Car.BrokenPartName}, платит: {client.Payment} руб.");
+            while (true)
+            {
+                service.ShowStatus();
+                Client client = service.GenerateClient();
+                Console.WriteLine($"Клиент приехал с поломкой: {client.Car.BrokenPartName}");
+                Console.WriteLine($"Клиент готов заплатить: {client.Payment} руб.");
+                Console.WriteLine("1 - Починить, 2 - Отказать, 3 - Купить детали, 0 - Выход");
+                string choice = Console.ReadLine();
+                if (choice == "1")
+                {
+                    service.RepairCar(client);
+                }
+                else if (choice == "2")
+                {
+                    Console.WriteLine("Вы отказали клиенту. Штраф 200 руб.");
+                    service.Balance -= 200;
+                }
+                else if (choice == "3")
+                {
+                    service.OrderPartsSimple();
+                }
+                else if (choice == "0")
+                {
+                    Console.WriteLine("Выход. Спасибо за игру.");
+                    break;
+                }
+                else
+                {
+                    Console.WriteLine("Неверный выбор.");
+                }
 
-            Console.WriteLine("Пробуем починить...");
-            service.RepairCar(client);
-
-            service.ShowStatus();
-            Console.WriteLine("Дальше будет меню и дни (следующие коммиты).");
+                if (service.Balance <= 0)
+                {
+                    Console.WriteLine("Вы разорились. Игра окончена.");
+                    break;
+                }
+            }
         }
     }
 }
