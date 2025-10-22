@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AutoServiceGame
 {
-    //запчасть
     public class Part
     {
         public int Id { get; set; }
@@ -21,7 +21,6 @@ namespace AutoServiceGame
         }
     }
 
-    //машина клиента
     public class Car
     {
         public int Id { get; set; }
@@ -35,7 +34,6 @@ namespace AutoServiceGame
         }
     }
 
-    //клиент и его машина
     public class Client
     {
         public int Id { get; set; }
@@ -52,7 +50,6 @@ namespace AutoServiceGame
         }
     }
 
-    //заказ запчастей
     public class PurchaseOrder
     {
         public int Id { get; set; }
@@ -65,7 +62,6 @@ namespace AutoServiceGame
         public PurchaseOrder() { }
     }
 
-    //основной класс управления
     public class AutoService
     {
         public int Balance { get; set; }
@@ -75,12 +71,39 @@ namespace AutoServiceGame
         public AutoService(int startingBalance)
         {
             Balance = startingBalance;
-            Parts = new List<Part>();
+            Parts = new List<Part>()
+            {
+                new Part("Двигатель", 5000, 1),
+                new Part("Колесо", 800, 4),
+                new Part("Тормоз", 1200, 2),
+                new Part("Фара", 400, 3)
+            };
             PendingOrders = new List<PurchaseOrder>();
         }
 
-        public void ShowStatus() { }
-        public Client GenerateClient() { return null; }
+        public void ShowStatus()
+        {
+            Console.WriteLine();
+            Console.WriteLine("=== Состояние автосервиса ===");
+            Console.WriteLine("Баланс: " + Balance + " руб.");
+            Console.WriteLine("Склад запчастей:");
+            foreach (var p in Parts)
+            {
+                Console.WriteLine($"- {p.Name}: {p.Quantity} шт. (цена {p.Price} руб.)");
+            }
+            Console.WriteLine("=============================");
+            Console.WriteLine();
+        }
+
+        public Client GenerateClient()
+        {
+            string[] possible = Parts.Select(x => x.Name).ToArray();
+            Random rnd = new Random();
+            string broken = possible[rnd.Next(possible.Length)];
+            int repairCost = Parts.First(p => p.Name == broken).Price + 500;
+            return new Client(new Car(broken), repairCost);
+        }
+
         public void RepairCar(Client client) { }
         public void OrderParts(string partName, int qty, int currentDay) { }
         public void ProcessDeliveries(int currentDay) { }
@@ -90,7 +113,10 @@ namespace AutoServiceGame
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Декомпозиция выполнена. Запустите следующие коммиты для полной игры.");
+            AutoService service = new AutoService(10000);
+            Console.WriteLine("Автосервис запущен (стартовые данные).");
+            service.ShowStatus();
+            Console.WriteLine("Дальше будет логика клиентов, ремонта и закупок (следующие коммиты).");
         }
     }
 }
