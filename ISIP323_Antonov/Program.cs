@@ -15,6 +15,10 @@ namespace AutoServiceGame
 
         public Part(string name, int price, int quantity)
         {
+            if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Имя детали не может быть пустым.");
+            if (price < 0) throw new ArgumentException("Цена не может быть отрицательной.");
+            if (quantity < 0) throw new ArgumentException("Количество не может быть отрицательным.");
+
             Name = name;
             Price = price;
             Quantity = quantity;
@@ -30,6 +34,7 @@ namespace AutoServiceGame
 
         public Car(string brokenPartName)
         {
+            if (string.IsNullOrWhiteSpace(brokenPartName)) throw new ArgumentException("Сломанная деталь не может быть пустой.");
             BrokenPartName = brokenPartName;
         }
     }
@@ -45,6 +50,7 @@ namespace AutoServiceGame
 
         public Client(Car car, int payment)
         {
+            if (payment < 0) throw new ArgumentException("Оплата не может быть отрицательной.");
             Car = car;
             Payment = payment;
         }
@@ -70,6 +76,7 @@ namespace AutoServiceGame
 
         public AutoService(int startingBalance)
         {
+            if (startingBalance < 0) startingBalance = 0;
             Balance = startingBalance;
             Parts = new List<Part>()
             {
@@ -104,7 +111,29 @@ namespace AutoServiceGame
             return new Client(new Car(broken), repairCost);
         }
 
-        public void RepairCar(Client client) { }
+        public void RepairCar(Client client)
+        {
+            if (client == null || client.Car == null)
+            {
+                Console.WriteLine("Некорректный клиент или машина.");
+                return;
+            }
+
+            string needed = client.Car.BrokenPartName;
+            var part = Parts.FirstOrDefault(p => p.Name == needed);
+            if (part != null && part.Quantity > 0)
+            {
+                part.Quantity = part.Quantity - 1;
+                Balance = Balance + client.Payment;
+                Console.WriteLine($"✅ Ремонт выполнен. Получено {client.Payment} руб. Деталь: {needed} использована.");
+            }
+            else
+            {
+                Console.WriteLine($"❌ Нужной детали ({needed}) нет на складе. Клиент уехал. Штраф за отказ: 300 руб.");
+                Balance = Balance - 300;
+            }
+        }
+
         public void OrderParts(string partName, int qty, int currentDay) { }
         public void ProcessDeliveries(int currentDay) { }
     }
@@ -114,9 +143,17 @@ namespace AutoServiceGame
         static void Main(string[] args)
         {
             AutoService service = new AutoService(10000);
-            Console.WriteLine("Автосервис запущен (стартовые данные).");
             service.ShowStatus();
-            Console.WriteLine("Дальше будет логика клиентов, ремонта и закупок (следующие коммиты).");
+
+            Console.WriteLine("Генерируем одного клиента для теста ремонта...");
+            Client client = service.GenerateClient();
+            Console.WriteLine($"Клиент с поломкой: {client.Car.BrokenPartName}, платит: {client.Payment} руб.");
+
+            Console.WriteLine("Пробуем починить...");
+            service.RepairCar(client);
+
+            service.ShowStatus();
+            Console.WriteLine("Дальше будет меню и дни (следующие коммиты).");
         }
     }
 }
