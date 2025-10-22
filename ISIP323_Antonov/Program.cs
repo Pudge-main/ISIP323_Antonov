@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.SQLite;
 using System.IO;
 using System.Linq;
@@ -135,7 +134,6 @@ namespace AutoServiceGame
 
         public void AddStock(int partId, int qty)
         {
-            if (qty <= 0) return;
             using (var conn = new SQLiteConnection(_connString))
             {
                 conn.Open();
@@ -150,16 +148,19 @@ namespace AutoServiceGame
                             int stockId = reader.GetInt32(0);
                             int oldQ = reader.GetInt32(1);
                             reader.Close();
+                            int newQ = oldQ + qty;
+                            if (newQ < 0) newQ = 0;
                             cmd.CommandText = "UPDATE Stocks SET Quantity = @q WHERE StockId = @sid;";
-                            cmd.Parameters.AddWithValue("@q", oldQ + qty);
+                            cmd.Parameters.AddWithValue("@q", newQ);
                             cmd.Parameters.AddWithValue("@sid", stockId);
                             cmd.ExecuteNonQuery();
                         }
                         else
                         {
                             reader.Close();
+                            int newQ = Math.Max(0, qty);
                             cmd.CommandText = "INSERT INTO Stocks(PartId, Quantity) VALUES(@pid, @q);";
-                            cmd.Parameters.AddWithValue("@q", qty);
+                            cmd.Parameters.AddWithValue("@q", newQ);
                             cmd.ExecuteNonQuery();
                         }
                     }
@@ -340,7 +341,6 @@ namespace AutoServiceGame
             }
 
             LoadFromDb();
-
             int dbBalance = _db.GetBalance();
             if (dbBalance == 0 && startingBalance > 0)
             {
@@ -362,7 +362,7 @@ namespace AutoServiceGame
         {
             LoadFromDb();
             Console.WriteLine();
-            Console.WriteLine("=== Состояние автосервиса (БД) ===");
+            Console.WriteLine("=== Состояние автосервиса (День) ===");
             Console.WriteLine("Баланс: " + Balance + " руб.");
             Console.WriteLine("Склад:");
             foreach (var item in CatalogAndStock)
@@ -404,7 +404,6 @@ namespace AutoServiceGame
             if (qty > 0)
             {
                 _db.AddStock(pid, -1);
-                AdjustStockDirect(pid, -1);
                 Balance += client.Payment;
                 _db.SetBalance(Balance);
                 Console.WriteLine($"Ремонт выполнен. Получено {client.Payment} руб. ({needed})");
@@ -414,37 +413,6 @@ namespace AutoServiceGame
                 Console.WriteLine($"Детали {needed} нет. Клиент уехал. Штраф 300 руб.");
                 Balance -= 300;
                 _db.SetBalance(Balance);
-            }
-        }
-
-        private void AdjustStockDirect(int partId, int delta)
-        {
-            using (var conn = new SQLiteConnection($"Data Source=autoservice.db;Version=3;"))
-            {
-                conn.Open();
-                using (var cmd = new SQLiteCommand(conn))
-                {
-                    cmd.CommandText = "SELECT Quantity FROM Stocks WHERE PartId = @pid;";
-                    cmd.Parameters.AddWithValue("@pid", partId);
-                    var res = cmd.ExecuteScalar();
-                    if (res == null)
-                    {
-                        int newQty = Math.Max(0, delta);
-                        cmd.CommandText = "INSERT INTO Stocks(PartId, Quantity) VALUES(@pid, @q);";
-                        cmd.Parameters.AddWithValue("@q", newQty);
-                        cmd.ExecuteNonQuery();
-                    }
-                    else
-                    {
-                        int cur = Convert.ToInt32(res);
-                        int updated = cur + delta;
-                        if (updated < 0) updated = 0;
-                        cmd.CommandText = "UPDATE Stocks SET Quantity = @q WHERE PartId = @pid;";
-                        cmd.Parameters.AddWithValue("@q", updated);
-                        cmd.ExecuteNonQuery();
-                    }
-                }
-                conn.Close();
             }
         }
 
@@ -479,7 +447,7 @@ namespace AutoServiceGame
             _db.SetBalance(Balance);
 
             _db.CreateOrder(pid, qty, currentDay, deliveryDays);
-            Console.WriteLine($"Заказано {qty} шт. {partName}. День заказа: {currentDay}. Прибудет через {deliveryDays} дня(ей).");
+            Console.WriteLine($"Заказано {qty} шт. {partName}. Прибудет через {deliveryDays} дней.");
         }
 
         public void ProcessDeliveries(int currentDay)
@@ -525,10 +493,78 @@ namespace AutoServiceGame
             DbManager db = new DbManager("autoservice.db");
             AutoService service = new AutoService(db, 10000);
 
-            Console.WriteLine("Автосервис (с БД) запущен.");
-            service.ShowStatus();
+            int day = 1;
+            Random rnd = new Random();
 
-            Console.WriteLine("Дальше будет основной цикл с днями и задержкой поставок (следующие коммиты).");
+            while (true)
+            {
+                Console.WriteLine($"\n=== День {day} ===");
+                service.ProcessDeliveries(day);
+
+                int clientsToday = rnd.Next(2, 6);
+                Console.WriteLine($"Сегодня приедет {clientsToday} клиентов.");
+
+                for (int i = 0; i < clientsToday; i++)
+                {
+                    service.ShowStatus();
+                    Client client = service.GenerateClient();
+                    Console.WriteLine($"Клиент с поломкой: {client.Car.BrokenPartName}, готов заплатить: {client.Payment} руб.");
+                    Console.WriteLine("1 - Починить, 2 - Отказать");
+                    string choice = Console.ReadLine();
+                    if (choice == "1")
+                    {
+                        service.RepairCar(client);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Вы отказали клиенту. Штраф 200 руб.");
+                        service.Balance -= 200;
+                        db.SetBalance(service.Balance);
+                    }
+
+                    if (service.Balance <= 0)
+                    {
+                        Console.WriteLine("Вы разорились. Игра окончена.");
+                        return;
+                    }
+                }
+
+                Console.WriteLine("День окончен. Хотите заказать запчасти? (y/n)");
+                string order = Console.ReadLine();
+                if (order != null && order.ToLower() == "y")
+                {
+                    service.LoadFromDb();
+                    for (int i = 0; i < service.CatalogAndStock.Count; i++)
+                    {
+                        var it = service.CatalogAndStock[i];
+                        Console.WriteLine($"{i + 1}. {it.part.Name} — цена {it.part.Price} руб. (на складе {it.qty})");
+                    }
+                    Console.Write("Выберите номер детали (0 - отмена): ");
+                    string sel = Console.ReadLine();
+                    int selIdx;
+                    if (int.TryParse(sel, out selIdx) && selIdx > 0 && selIdx <= service.CatalogAndStock.Count)
+                    {
+                        Console.Write("Введите количество для заказа: ");
+                        string qStr = Console.ReadLine();
+                        int q;
+                        if (int.TryParse(qStr, out q) && q > 0)
+                        {
+                            var chosen = service.CatalogAndStock[selIdx - 1];
+                            service.OrderPartsDeferred(chosen.part.Name, q, day, 2);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Неверное количество.");
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Отмена заказа.");
+                    }
+                }
+
+                day++;
+            }
         }
     }
 }
